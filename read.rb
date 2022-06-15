@@ -24,25 +24,41 @@ OptionParser.new do |opt|
 
 end.parse!
 
-result = Post.find(options[:limit], options[:type], options[:id])
+# Если пользователь вызвал метод чтения из БД с параметром идентификатора, вызываем метод find_by_id класса Post
+result = if !options[:id].nil?
+           Post.find_by_id(options[:id])
+           #  иначе вызываем метод find_all с параметрами, указанными пользователем, и выводим таблицу всех записей
+         else
+           Post.find_all(options[:limit], options[:type])
+         end
 
-if result.is_a? Post # показываем конкретный пост
+# Если был введен идентификатор, то выводим на экран запись с данным id
+if result.is_a? Post
   puts "Запись #{result.class.name}, id = #{options[:id]}"
-  # выведем весь пост на экран и закроемся
-  result.to_strings.each do |line|
-    puts line
-  end
 
-else # показываем таблицу результатов
+  result.to_strings.each { |line| puts line }
+end
 
-  print "| id\t| @type\t|  @created_at\t\t\t\t|  @text \t\t\t| @url\t\t\t\t| @due_date \t "
+# Если идентификатора не было, то выводим таблицу всех записей, с указанными параметрами
+if (!result.is_a? Post) && !result.nil?
+  print '| id                 '
+  print '| @type              '
+  print '| @created_at        '
+  print '| @text              '
+  print '| @url               '
+  print '| @due_date          '
+  print '|'
 
   result.each do |row|
     puts
-    # puts '_'*80
+
     row.each do |element|
-      print "|  #{element.to_s.delete("\n")[0..40]}\t"
+      element_text = "| #{element.to_s.delete("\n")[0..17]}"
+      element_text << ' ' * (21 - element_text.size)
+      print element_text
     end
+
+    print '|'
   end
 end
 
