@@ -50,19 +50,26 @@ class Post
     db = SQLite3::Database.open(@@SQLITE_DB_FILE) # открываем "соединение" к базе SQLite
     db.results_as_hash = true # настройка соединения к базе, он результаты из базы преобразует в Руби хэши
 
-    # запрос к базе на вставку новой записи в соответствии с хэшом, сформированным дочерним классом to_db_hash
-    db.execute(
-      "INSERT INTO posts (" +
-        to_db_hash.keys.join(', ') + # все поля, перечисленные через запятую
-        ") " +
-        " VALUES ( " +
-        ('?, ' * to_db_hash.keys.size).chomp(', ') + # строка из заданного числа _плейсхолдеров_ ?,?,?...
-        ")",
-      to_db_hash.values # массив значений хэша, которые будут вставлены в запрос вместо _плейсхолдеров_
-    )
+    # Пробуем выполнить запрос к БД
+    begin
+      # запрос к базе на вставку новой записи в соответствии с хэшом, сформированным дочерним классом to_db_hash
+      db.execute(
+        "INSERT INTO posts (" +
+          to_db_hash.keys.join(', ') + # все поля, перечисленные через запятую
+          ") " +
+          " VALUES ( " +
+          ('?, ' * to_db_hash.keys.size).chomp(', ') + # строка из заданного числа _плейсхолдеров_ ?,?,?...
+          ")",
+        to_db_hash.values # массив значений хэша, которые будут вставлены в запрос вместо _плейсхолдеров_
+      )
+
+    #  Ловим исключение при неудачном выполнении запроса, выводим сообщение и завершаем программу
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
 
     insert_row_id = db.last_insert_row_id
-
     # закрываем соединение
     db.close
 
@@ -82,7 +89,16 @@ class Post
 
     db.results_as_hash = true # настройка соединения к базе, он результаты из базы преобразует в Руби хэши
     # выполняем наш запрос, он возвращает массив результатов, в нашем случае из одного элемента
-    result = db.execute("SELECT * FROM posts WHERE rowid = ?", id)
+
+    # Пробуем выполнить запрос к БД
+    begin
+      result = db.execute("SELECT * FROM posts WHERE rowid = ?", id)
+      #  Ловим исключение при неудачном выполнении запроса, выводим сообщение и завершаем программу
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
+
     # получаем единственный результат (если вернулся массив)
     result = result[0] if result.is_a? Array
     db.close
@@ -119,8 +135,15 @@ class Post
 
     query += "LIMIT :limit " unless limit.nil? # если задан лимит, надо добавить условие
 
-    # готовим запрос в базу, как плов :)
-    statement = db.prepare query
+    # Пробуем приготовить запрос
+    begin
+      # готовим запрос в базу, как плов :)
+      statement = db.prepare query
+      #  Ловим исключение при неудачном выполнении запроса, выводим сообщение и завершаем программу
+    rescue SQLite3::SQLException => e
+      puts "Не удалось выполнить запрос в базе #{@@SQLITE_DB_FILE}"
+      abort e.message
+    end
 
     statement.bind_param('type', type) unless type.nil? # загружаем в запрос тип вместо плейсхолдера, добавляем лук :)
     statement.bind_param('limit', limit) unless limit.nil? # загружаем лимит вместо плейсхолдера, добавляем морковь :)
@@ -131,8 +154,4 @@ class Post
 
     return result
   end
-
-  # Находит в базе запись по идентификатору или массив записей
-  # из базы данных, который можно например показать в виде таблицы на экране
-
 end
