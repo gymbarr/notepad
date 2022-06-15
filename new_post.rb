@@ -5,13 +5,13 @@ require_relative 'link.rb'
 require_relative 'task.rb'
 
 # Как обычно, при использовании классов программа выглядит очень лаконично
-puts "Привет, я твой блокнот!"
+puts "Привет, я твой блокнот! Версия 2 + SQLite"
 
 # Теперь надо спросить у пользователя, что он хочет создать
 puts "Что хотите записать в блокнот?"
 
 # массив возможных видов Записи (поста)
-choices = Post.post_types
+choices = Post.post_types.keys
 
 choice = -1
 
@@ -24,7 +24,7 @@ until choice >= 0 && choice < choices.size # пока юзер не выбрал
 end
 
 # выбор сделан, создаем запись с помощью стат. метода класса Post
-entry = Post.create(choice)
+entry = Post.create(choices[choice])
 
 # сейчас в переменной entry лежит один из детей класса Post, какой именно,
 # определилось выбором пользователя, переменной choice.
@@ -33,5 +33,7 @@ entry = Post.create(choice)
 # Просим пользователя ввести пост (каким бы он ни был)
 entry.read_from_console
 
-# Сохраняем пост в файл
-entry.save
+# Сохраняем пост в БД
+id = entry.save_to_db
+
+puts "Ура, запись сохранена, id = #{id}"
